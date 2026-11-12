@@ -2,7 +2,6 @@ node_modules/
 .env
 .env.*
 !.env.example
-data/*.tmp
-data/*.json
+data/
 *.log
 npm-debug.log*
