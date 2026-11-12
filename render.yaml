@@ -1,0 +1,53 @@
+services:
+  - type: web
+    name: propertyflow-platform
+    runtime: node
+    region: singapore
+    plan: starter
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: false
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_BASE_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: BOOTSTRAP_DEVELOPER_NAME
+        sync: false
+      - key: BOOTSTRAP_DEVELOPER_EMAIL
+        sync: false
+      - key: BOOTSTRAP_DEVELOPER_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: AFRICASTALKING_USERNAME
+        sync: false
+      - key: AFRICASTALKING_API_KEY
+        sync: false
+      - key: AFRICASTALKING_ENVIRONMENT
+        value: production
+      - key: AFRICASTALKING_SENDER_ID
+        sync: false
+      - key: DARAJA_ENVIRONMENT
+        value: sandbox
+      - key: DARAJA_CONSUMER_KEY
+        sync: false
+      - key: DARAJA_CONSUMER_SECRET
+        sync: false
+      - key: DARAJA_SHORTCODE
+        sync: false
+      - key: DARAJA_PASSKEY
+        sync: false
+      - key: DARAJA_CALLBACK_TOKEN
+        generateValue: true
+      - key: DARAJA_TRANSACTION_TYPE
+        value: CustomerPayBillOnline

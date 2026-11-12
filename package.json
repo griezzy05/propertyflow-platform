@@ -1,0 +1,17 @@
+{
+  "name": "propertyflow-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Role-based property management platform",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "pg": "^8.16.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
