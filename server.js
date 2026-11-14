@@ -15,6 +15,7 @@ const ROOT = __dirname;
 const FRONTEND_DIR = path.join(ROOT, 'frontend');
 const DATABASE_URL = process.env.DATABASE_URL;
 const DATABASE_SSL = process.env.DATABASE_SSL !== 'false';
+const DATABASE_SSL_REJECT_UNAUTHORIZED = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED !== 'false';
 const APP_BASE_URL = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
 const STORE_FILE = process.env.PROPERTYFLOW_STORE_FILE
   ? path.resolve(process.env.PROPERTYFLOW_STORE_FILE)
@@ -50,7 +51,7 @@ function createPool() {
   if (!DATABASE_URL) return null;
   return new Pool({
     connectionString: DATABASE_URL,
-    ssl: DATABASE_SSL ? { rejectUnauthorized: true } : false,
+    ssl: DATABASE_SSL ? { rejectUnauthorized: DATABASE_SSL_REJECT_UNAUTHORIZED } : false,
     max: Number(process.env.DATABASE_POOL_SIZE || 10),
     connectionTimeoutMillis: 10_000,
     idleTimeoutMillis: 30_000
