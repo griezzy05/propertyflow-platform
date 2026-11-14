@@ -3,7 +3,7 @@ services:
     name: propertyflow-platform
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
@@ -17,8 +17,6 @@ services:
         sync: false
       - key: DATABASE_SSL
         value: "true"
-      - key: DATABASE_SSL_REJECT_UNAUTHORIZED
-        value: "false"
       - key: SESSION_SECRET
         generateValue: true
       - key: BOOTSTRAP_DEVELOPER_NAME

@@ -56,7 +56,7 @@ Production credentials, verified email/SMS delivery, public callback reachabilit
 
 ## Deployment
 
-`render.yaml` describes a Render web service and leaves automatic deployment disabled. Deploy the web service in the same region as its PostgreSQL database so it can use the internal database URL; the current blueprint targets Frankfurt. Set the blueprint's secret values directly in Render, and confirm the public HTTPS URL before the first deployment. Keep M-Pesa in sandbox until the callback and reconciliation behavior are tested. Provider credentials and live deployment still require separate setup and verification.
+`render.yaml` describes a Free Render web service in Frankfurt and leaves automatic deployment disabled. For a $0 long-term setup, migrate the existing Render Free database to a Frankfurt Neon Free project, then set `DATABASE_URL` directly in Render to Neon's connection string; do not use the expiring Render Free database as long-term storage. Neon uses a public TLS connection, so leave `DATABASE_SSL_REJECT_UNAUTHORIZED` enabled. Set all other secret values directly in Render and confirm the public HTTPS URL before deployment. Free services can sleep or pause and have strict usage limits; review the [Render Free limits](https://render.com/docs/free) and [Neon Free plan limits](https://neon.com/pricing). Keep M-Pesa in sandbox until the callback and reconciliation behavior are tested. Provider credentials and live deployment still require separate setup and verification.
 
 ## Checks
 
