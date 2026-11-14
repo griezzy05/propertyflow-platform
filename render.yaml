@@ -2,7 +2,7 @@ services:
   - type: web
     name: propertyflow-platform
     runtime: node
-    region: singapore
+    region: frankfurt
     plan: starter
     buildCommand: npm ci
     startCommand: npm start

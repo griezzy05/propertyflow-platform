@@ -54,7 +54,7 @@ Production credentials, verified email/SMS delivery, public callback reachabilit
 
 ## Deployment
 
-`render.yaml` describes a Render web service and leaves automatic deployment disabled. Create and configure the PostgreSQL database and Render service, set the blueprint's secret values in Render, and confirm the public HTTPS URL before the first deployment. Keep M-Pesa in sandbox until the callback and reconciliation behavior are tested. Provider credentials and live deployment still require separate setup and verification.
+`render.yaml` describes a Render web service and leaves automatic deployment disabled. Deploy the web service in the same region as its PostgreSQL database so it can use the internal database URL; the current blueprint targets Frankfurt. Set the blueprint's secret values directly in Render, and confirm the public HTTPS URL before the first deployment. Keep M-Pesa in sandbox until the callback and reconciliation behavior are tested. Provider credentials and live deployment still require separate setup and verification.
 
 ## Checks
 
