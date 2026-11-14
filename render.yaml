@@ -27,28 +27,12 @@ services:
         sync: false
       - key: BOOTSTRAP_DEVELOPER_PASSWORD
         sync: false
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        sync: false
-      - key: AFRICASTALKING_USERNAME
-        sync: false
-      - key: AFRICASTALKING_API_KEY
-        sync: false
       - key: AFRICASTALKING_ENVIRONMENT
         value: production
-      - key: AFRICASTALKING_SENDER_ID
-        sync: false
       - key: DARAJA_ENVIRONMENT
         value: sandbox
-      - key: DARAJA_CONSUMER_KEY
-        sync: false
-      - key: DARAJA_CONSUMER_SECRET
-        sync: false
       - key: DARAJA_SHORTCODE
-        sync: false
-      - key: DARAJA_PASSKEY
-        sync: false
+        value: "174379"
       - key: DARAJA_CALLBACK_TOKEN
         generateValue: true
       - key: DARAJA_TRANSACTION_TYPE

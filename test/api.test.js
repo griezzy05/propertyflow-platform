@@ -254,7 +254,7 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   assert.match(reset.message, /If that active account exists/);
 });
 
-test('production mode refuses to start without secret-backed services', () => {
+test('production mode requires core secrets but permits unconfigured providers', () => {
   const result = spawnSync(process.execPath, ['server.js'], {
     cwd: ROOT,
     env: { ...process.env, NODE_ENV: 'production', DATABASE_URL: '', PORT: '3199' },
@@ -263,5 +263,6 @@ test('production mode refuses to start without secret-backed services', () => {
   });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Missing production configuration/);
+  assert.doesNotMatch(result.stderr, /RESEND_API_KEY|AFRICASTALKING_API_KEY|DARAJA_CONSUMER_KEY/);
   assert.doesNotMatch(result.stderr, /Welcome123!/);
 });

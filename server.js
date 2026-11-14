@@ -32,10 +32,7 @@ function assertProductionConfig() {
   if (process.env.NODE_ENV !== 'production') return;
   const required = [
     'DATABASE_URL', 'APP_BASE_URL', 'SESSION_SECRET', 'BOOTSTRAP_DEVELOPER_NAME', 'BOOTSTRAP_DEVELOPER_EMAIL',
-    'BOOTSTRAP_DEVELOPER_PASSWORD', 'RESEND_API_KEY', 'EMAIL_FROM',
-    'AFRICASTALKING_USERNAME', 'AFRICASTALKING_API_KEY',
-    'DARAJA_CONSUMER_KEY', 'DARAJA_CONSUMER_SECRET', 'DARAJA_SHORTCODE',
-    'DARAJA_PASSKEY', 'DARAJA_CALLBACK_TOKEN'
+    'BOOTSTRAP_DEVELOPER_PASSWORD'
   ];
   const missing = required.filter(key => !process.env[key]);
   if (missing.length) throw new Error(`Missing production configuration: ${missing.join(', ')}`);
