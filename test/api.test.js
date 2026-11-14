@@ -24,7 +24,7 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   const storeFile = path.join(directory, 'store.json');
   const child = spawn(process.execPath, ['server.js'], {
     cwd: ROOT,
-    env: { ...process.env, NODE_ENV: 'development', PORT: String(port), PROPERTYFLOW_STORE_FILE: storeFile },
+    env: { ...process.env, NODE_ENV: 'development', PORT: String(port), APP_BASE_URL: `http://127.0.0.1:${port}`, PROPERTYFLOW_STORE_FILE: storeFile },
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let serverOutput = '';
@@ -130,6 +130,14 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   assert.equal(unit.status, 'vacant');
   assert.equal(Object.hasOwn(unit, 'qrTokenHash'), false);
   await api(`/api/properties/${property.id}/units`, 'POST', { unitNumber: 'A-1' }, owner, 409);
+  const firstQr = await api(`/api/units/${unit.id}/qr`, 'POST', undefined, owner);
+  assert.match(firstQr.qrCode, /^data:image\/png;base64,/);
+  const firstQrToken = new URL(firstQr.qrUrl).pathname.split('/').at(-1);
+  assert.equal((await api(`/api/units/resolve/${firstQrToken}`, 'GET', undefined, owner)).unit.id, unit.id);
+  await api(`/api/units/resolve/${firstQrToken}`, 'GET', undefined, undefined, 401);
+  const qrRedirect = await fetch(firstQr.qrUrl, { redirect: 'manual' });
+  assert.equal(qrRedirect.status, 302);
+  assert.equal(qrRedirect.headers.get('location'), `/?unit=${firstQrToken}`);
   const agentInvite = await api('/api/agents', 'POST', {
     name: 'Test Agent',
     email: 'test-agent@example.test',
@@ -137,7 +145,8 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
     agentType: 'primary'
   }, admin, 201);
   await activate(agentInvite.invitationPath, 'SecureAgentPass123!');
-  const agent = await login('test-agent@example.test', 'SecureAgentPass123!');
+  let agent = await login('test-agent@example.test', 'SecureAgentPass123!');
+  await api(`/api/units/resolve/${firstQrToken}`, 'GET', undefined, agent, 403);
 
   const tenantInvite = await api('/api/tenants', 'POST', {
     name: 'Test Tenant',
@@ -151,7 +160,7 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
     nextRentDue: '2026-12-01'
   }, owner, 201);
   await activate(tenantInvite.invitationPath, 'SecureTenantPass123!');
-  const tenant = await login('test-tenant@example.test', 'SecureTenantPass123!');
+  let tenant = await login('test-tenant@example.test', 'SecureTenantPass123!');
 
   const tenantDashboard = await api('/api/dashboard', 'GET', undefined, tenant);
   assert.equal(tenantDashboard.metrics.currentBalance, 25000);
@@ -159,6 +168,13 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   assert.equal(tenantDashboard.unit.id, unit.id);
   assert.equal(tenantDashboard.lease.depositAmount, 25000);
   assert.equal(tenantDashboard.lease.status, 'active');
+  assert.equal((await api(`/api/units/resolve/${firstQrToken}`, 'GET', undefined, tenant)).unit.id, unit.id);
+  const rotatedQr = await api(`/api/units/${unit.id}/qr`, 'POST', undefined, owner);
+  const rotatedQrToken = new URL(rotatedQr.qrUrl).pathname.split('/').at(-1);
+  assert.notEqual(rotatedQrToken, firstQrToken);
+  await api(`/api/units/resolve/${firstQrToken}`, 'GET', undefined, owner, 404);
+  assert.equal((await fetch(firstQr.qrUrl, { redirect: 'manual' })).status, 404);
+  assert.equal((await api(`/api/units/resolve/${rotatedQrToken}`, 'GET', undefined, tenant)).unit.id, unit.id);
   const rentChangeDate = new Date().toISOString().slice(0, 10);
   await api(`/api/properties/${property.id}/units`, 'POST', { unitNumber: 'A-2' }, tenant, 403);
   await api(`/api/leases/${tenantDashboard.lease.id}/rent`, 'PATCH', {
@@ -193,6 +209,33 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   assert.equal((await api('/api/dashboard', 'GET', undefined, tenant)).requests[0].status, 'in_progress');
   await api(`/api/work-orders/${assignment.workOrder.id}/status`, 'PATCH', { status: 'completed' }, agent);
   assert.equal((await api('/api/dashboard', 'GET', undefined, tenant)).requests[0].status, 'resolved');
+  assert.equal((await api(`/api/units/resolve/${rotatedQrToken}`, 'GET', undefined, agent)).unit.id, unit.id);
+
+  await api('/api/auth/change-password', 'POST', {
+    currentPassword: 'IncorrectPassword123!',
+    newPassword: 'NewTenantPassword456!'
+  }, tenant, 403);
+  await api('/api/auth/change-password', 'POST', {
+    currentPassword: 'SecureTenantPass123!',
+    newPassword: 'SecureTenantPass123!'
+  }, tenant, 422);
+  const passwordChange = await api('/api/auth/change-password', 'POST', {
+    currentPassword: 'SecureTenantPass123!',
+    newPassword: 'NewTenantPassword456!'
+  }, tenant);
+  assert.match(passwordChange.message, /Sign in again/);
+  await api('/api/dashboard', 'GET', undefined, tenant, 401);
+  await api('/api/auth/login', 'POST', {
+    email: 'test-tenant@example.test',
+    password: 'SecureTenantPass123!'
+  }, undefined, 401);
+  tenant = await login('test-tenant@example.test', 'NewTenantPassword456!');
+  const savedStore = JSON.parse(await fs.readFile(storeFile, 'utf8'));
+  const savedTenant = savedStore.users.find(user => user.email === 'test-tenant@example.test');
+  assert.equal(savedTenant.status, 'active');
+  assert.notEqual(savedTenant.passwordHash, 'NewTenantPassword456!');
+  assert.match(savedTenant.passwordHash, /^[a-f0-9]+:[a-f0-9]+$/);
+  assert.ok(savedStore.auditLogs.some(entry => entry.action === 'unit.qr_scanned' && entry.actorId === tenantInvite.tenant.id));
 
   const moveOut = await api('/api/move-outs', 'POST', {
     tenantId: tenantInvite.tenant.id,

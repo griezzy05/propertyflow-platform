@@ -8,6 +8,7 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { AsyncLocalStorage } = require('node:async_hooks');
 const { Pool } = require('pg');
+const QRCode = require('qrcode');
 
 const PORT = Number(process.env.PORT || 3000);
 const ROOT = __dirname;
@@ -799,6 +800,22 @@ async function handleApi(req, res, url) {
     await saveStore(store);
     return send(res, 200, { message: 'Your account is ready. Sign in with your new password.' });
   }
+  if (method === 'POST' && url.pathname === '/api/auth/change-password') {
+    const user = requireUser(req, res);
+    if (!user) return;
+    const body = await readJson(req);
+    const currentPassword = String(body.currentPassword || '');
+    const newPassword = String(body.newPassword || '');
+    if (!verifyPassword(currentPassword, user.passwordHash)) return error(res, 403, 'Current password is incorrect.');
+    if (newPassword.length < 12) return error(res, 422, 'Choose a password with at least 12 characters.');
+    if (verifyPassword(newPassword, user.passwordHash)) return error(res, 422, 'Choose a password you have not used before.');
+    user.passwordHash = hashPassword(newPassword);
+    for (const [hash, session] of Object.entries(store.sessions)) {
+      if (session.userId === user.id) delete store.sessions[hash];
+    }
+    await saveStore(store);
+    return send(res, 200, { message: 'Password updated. Sign in again with your new password.' });
+  }
   if (method === 'POST' && url.pathname === '/api/auth/password-reset') {
     const body = await readJson(req);
     const email = String(body.email || '').trim().toLowerCase();
@@ -1060,6 +1077,60 @@ async function handleApi(req, res, url) {
     store.auditLogs.unshift({ id: id('audit'), actorId: user.id, action: 'unit.created', subjectId: unit.id, createdAt: new Date().toISOString() });
     await saveStore(store);
     return send(res, 201, { unit: publicUnit(unit) });
+  }
+  const unitQrMatch = url.pathname.match(/^\/api\/units\/([^/]+)\/qr$/);
+  if (method === 'POST' && unitQrMatch) {
+    const user = requireUser(req, res, ['owner']);
+    if (!user) return;
+    const unit = store.units.find(item => item.id === unitQrMatch[1] && item.ownerId === user.id);
+    if (!unit) return error(res, 404, 'Unit not found.');
+    const qrToken = crypto.randomBytes(32).toString('base64url');
+    const qrTokenHash = crypto.createHash('sha256').update(qrToken).digest('hex');
+    const qrUrl = new URL(`/unit/${qrToken}`, APP_BASE_URL).toString();
+    const qrCode = await QRCode.toDataURL(qrUrl, {
+      errorCorrectionLevel: 'H',
+      margin: 2,
+      width: 640,
+      type: 'image/png'
+    });
+    unit.qrTokenHash = qrTokenHash;
+    unit.qrGeneratedAt = new Date().toISOString();
+    store.auditLogs.unshift({ id: id('audit'), actorId: user.id, action: 'unit.qr_rotated', subjectId: unit.id, createdAt: unit.qrGeneratedAt });
+    await saveStore(store);
+    return send(res, 200, { unit: publicUnit(unit), qrUrl, qrCode });
+  }
+  const unitResolveMatch = url.pathname.match(/^\/api\/units\/resolve\/([^/]+)$/);
+  if (method === 'GET' && unitResolveMatch) {
+    const user = requireUser(req, res, ['developer', 'admin', 'owner', 'tenant', 'agent']);
+    if (!user) return;
+    const qrTokenHash = crypto.createHash('sha256').update(unitResolveMatch[1]).digest('hex');
+    const unit = store.units.find(item => item.qrTokenHash === qrTokenHash);
+    if (!unit) return error(res, 404, 'This unit QR code is invalid or has been replaced.');
+    const hasAccess = user.role === 'developer'
+      || (user.role === 'owner' && unit.ownerId === user.id)
+      || (user.role === 'admin' && (user.ownerIds || []).includes(unit.ownerId))
+      || (user.role === 'tenant' && user.unitId === unit.id)
+      || (user.role === 'agent' && user.ownerId === unit.ownerId && store.workOrders.some(order => {
+        if (order.assignedAgentId !== user.id || order.propertyId !== unit.propertyId) return false;
+        const request = store.requests.find(item => item.id === order.requestId);
+        const tenant = request && store.users.find(item => item.id === request.tenantId);
+        return order.unit === unit.unitNumber || tenant?.unitId === unit.id;
+      }));
+    if (!hasAccess) return error(res, 403, 'This QR code is not assigned to your account.');
+    const property = propertyFor(unit.propertyId);
+    store.auditLogs.unshift({ id: id('audit'), actorId: user.id, action: 'unit.qr_scanned', subjectId: unit.id, createdAt: new Date().toISOString() });
+    await saveStore(store);
+    const assignedWorkOrders = user.role === 'agent' ? store.workOrders.filter(order => {
+      if (order.assignedAgentId !== user.id || order.propertyId !== unit.propertyId) return false;
+      const request = store.requests.find(item => item.id === order.requestId);
+      const tenant = request && store.users.find(item => item.id === request.tenantId);
+      return order.unit === unit.unitNumber || tenant?.unitId === unit.id;
+    }).map(workOrderView) : [];
+    return send(res, 200, {
+      unit: publicUnit(unit),
+      property: property ? { id: property.id, name: property.name, address: property.address } : null,
+      workOrders: assignedWorkOrders
+    });
   }
   if (method === 'POST' && url.pathname === '/api/properties') {
     const user = requireUser(req, res, ['owner']);
@@ -1354,6 +1425,17 @@ const server = http.createServer(async (req, res) => {
       const task = apiQueue.then(() => handleApi(req, res, url));
       apiQueue = task.then(() => undefined, () => undefined);
       return await task;
+    }
+    const unitQrPageMatch = url.pathname.match(/^\/unit\/([A-Za-z0-9_-]{40,})$/);
+    if (req.method === 'GET' && unitQrPageMatch) {
+      const qrTokenHash = crypto.createHash('sha256').update(unitQrPageMatch[1]).digest('hex');
+      if (!store.units.some(unit => unit.qrTokenHash === qrTokenHash)) return error(res, 404, 'This unit QR code is invalid or has been replaced.');
+      res.writeHead(302, {
+        Location: `/?unit=${encodeURIComponent(unitQrPageMatch[1])}`,
+        'Cache-Control': 'no-store',
+        'Referrer-Policy': 'no-referrer'
+      });
+      return res.end();
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') return error(res, 405, 'Method not allowed.');
     return await serveStatic(res, url.pathname);

@@ -50,12 +50,14 @@ Only an owner administrator can change the agreed rent. A rent change must store
 
 PropertyFlow must generate unit identity automatically. The platform owner does not manually create codes for every apartment.
 
-When a Property Admin adds a unit, the backend must automatically create:
+When a Property Admin adds a unit, the backend creates:
 
 - an immutable internal `unitId`;
 - a human-readable code, for example `MC-B-12`;
 - a random QR token; and
 - a downloadable/printable label linked to that token.
+
+The unit actions let the Property Admin generate or replace a printable PNG label. Only a hash of the QR token is retained; replacing the label invalidates the previous token. Scanning opens sign-in, and the backend checks the signed-in role and unit assignment before returning any unit or work-order information. Authorized scans are audit logged.
 
 The printed code belongs to the physical unit, not its tenant. It remains with the apartment when a tenant moves out. The printed label must not contain tenant names, rent amounts, phone numbers, payment balances, or lease information.
 
@@ -102,7 +104,7 @@ Each paid property organisation includes two agent accounts by default: primary 
 - [ ] Replace the owner/delegated-admin split with a Property Admin organisation and caretaker permission model.
 - [x] Add unit and lease collections; legacy tenant records receive a best-effort unit/lease migration when loaded.
 - [x] Add a unit creation form with asking rent, unit type, and generated unit code.
-- [ ] Add QR-token creation, secure resolution, printable label download, token rotation, and scan audit logs.
+- [x] Add QR-token creation, secure role-checked resolution, printable label download, token rotation, and scan audit logs.
 - [x] Add a unit rent roll showing unit, tenant, agreed rent, due date, paid amount, and balance.
 - [x] Add an owner-only rent-change workflow with an effective date and audit history.
 - [ ] Add restricted caretaker permissions and test that caretaker accounts cannot access finance routes.
