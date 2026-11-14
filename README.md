@@ -56,7 +56,7 @@ Production credentials, verified email/SMS delivery, public callback reachabilit
 
 ## Deployment
 
-`render.yaml` describes a paid Starter Render web service in Frankfurt and leaves automatic deployment disabled. The existing Render PostgreSQL database is also in Frankfurt, so configure the service's `DATABASE_URL` with that database's **internal** connection URL. Set secret values directly in Render, never in source control or chat, and confirm the public HTTPS URL before deployment. Keep M-Pesa in sandbox until the callback and reconciliation behavior is tested. Email, SMS, and Daraja credentials can be added later; the corresponding delivery and payment actions remain unavailable until configured.
+`render.yaml` describes a Free Render web service in Frankfurt and leaves automatic deployment disabled. The existing Render PostgreSQL database is also in Frankfurt, so configure the service's `DATABASE_URL` with that database's **internal** connection URL. Set secret values directly in Render, never in source control or chat, and confirm the public HTTPS URL before deployment. Free services can sleep after inactivity and cold-start on the next request; review the [Render Free limits](https://render.com/docs/free). Keep M-Pesa in sandbox until the callback and reconciliation behavior is tested. Email, SMS, and Daraja credentials can be added later; the corresponding delivery and payment actions remain unavailable until configured.
 
 ## Checks
 

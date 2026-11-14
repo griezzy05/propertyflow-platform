@@ -3,7 +3,7 @@ services:
     name: propertyflow-platform
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: free
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
