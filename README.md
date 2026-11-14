@@ -42,7 +42,7 @@ Provider credentials are optional in local development. Without them, the relate
 
 Set `DATABASE_URL` to a PostgreSQL connection string. The service applies `database/migrations/001_propertyflow_state.sql` at startup. The current migration stores application data in a single JSONB state row and serializes database-backed API operations with a row lock. Unit and lease collections are stored in that state, with legacy tenant records migrated at load time. This is a simple durable MVP strategy, not a normalized or high-throughput production data model.
 
-`DATABASE_SSL=true` enables encrypted PostgreSQL connections. Certificate verification is enabled by default; for Render's internal URL, set `DATABASE_SSL_REJECT_UNAUTHORIZED=false` because Render's internal TLS certificates are self-signed. Use the internal URL only from a service in the same Render region.
+`DATABASE_SSL=true` enables encrypted PostgreSQL connections. Certificate verification is enabled by default. Render's internal PostgreSQL URL is only reachable by services in the same region; for cross-region connections, use the external URL and keep certificate verification enabled.
 
 When running in production, the server requires `DATABASE_URL`, an HTTPS `APP_BASE_URL`, `SESSION_SECRET` (at least 32 characters), bootstrap developer name/email/password (at least 16 characters for the password), and the Resend, Africa's Talking, and Daraja configuration keys listed in `.env.example`. The first run of a fresh production database creates only the private developer account; production does not seed demo users. Keep database backups and securely store all provider secrets.
 
@@ -56,7 +56,7 @@ Production credentials, verified email/SMS delivery, public callback reachabilit
 
 ## Deployment
 
-`render.yaml` describes a Free Render web service in Frankfurt and leaves automatic deployment disabled. For a $0 long-term setup, migrate the existing Render Free database to a Frankfurt Neon Free project, then set `DATABASE_URL` directly in Render to Neon's connection string; do not use the expiring Render Free database as long-term storage. Neon uses a public TLS connection, so leave `DATABASE_SSL_REJECT_UNAUTHORIZED` enabled. Set all other secret values directly in Render and confirm the public HTTPS URL before deployment. Free services can sleep or pause and have strict usage limits; review the [Render Free limits](https://render.com/docs/free) and [Neon Free plan limits](https://neon.com/pricing). Keep M-Pesa in sandbox until the callback and reconciliation behavior are tested. Provider credentials and live deployment still require separate setup and verification.
+`render.yaml` describes a paid Starter Render web service in Singapore and leaves automatic deployment disabled. The existing Render PostgreSQL database is in Frankfurt, so configure the service's `DATABASE_URL` with that database's **external** connection URL; its internal URL is only reachable by services in the same region. Keep `DATABASE_SSL=true` and certificate verification enabled for the external TLS connection. Set secret values directly in Render, never in source control or chat, and confirm the public HTTPS URL before deployment. Keep M-Pesa in sandbox until the callback and reconciliation behavior is tested. Provider credentials and live deployment still require separate setup and verification.
 
 ## Checks
 
