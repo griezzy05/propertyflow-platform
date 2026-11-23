@@ -1,0 +1,52 @@
+# PropertyFlow Document Placeholder Inventory
+
+## Placeholders
+- `[ACKNOWLEDGE]`
+- `[AMOUNT]`
+- `[BACKUP FREQUENCY]`
+- `[BACKUP RETENTION]`
+- `[BILLING CYCLE]`
+- `[COMPANY LEGAL NAME]`
+- `[CREDIT FORMULA AND CAP]`
+- `[DOCUMENT OWNER]`
+- `[DPO/PRIVACY CONTACT]`
+- `[EFFECTIVE DATE]`
+- `[INCLUDED/EXCLUDED]`
+- `[INVOICE TIMING]`
+- `[KNOWN LIMITATIONS]`
+- `[KRA PIN]`
+- `[LEASE DATES]`
+- `[LOCATION]`
+- `[NEXT REVIEW DATE]`
+- `[ODPC REGISTRATION NUMBER]`
+- `[OR AGREED FREQUENCY]`
+- `[OWNER NAME]`
+- `[PROPERTY]`
+- `[RECOVERY TEAM CONTACTS]`
+- `[REGION]`
+- `[REGISTERED ADDRESS]`
+- `[RESOLVE]`
+- `[RESPONSE TARGET]`
+- `[RETENTION PERIOD]`
+- `[RPO]`
+- `[RTO]`
+- `[STATUS]`
+- `[SUPPORT EMAIL]`
+- `[SUPPORT HOURS]`
+- `[SUPPORT PHONE]`
+- `[TARGET]`
+- `[TENANT NAME]`
+- `[TO BE CONFIRMED]`
+- `[UNIT]`
+- `[UPDATE]`
+- `[VERIFY VERSION]`
+- `[WINDOW]`
+
+## [VERIFY WITH ADVOCATE] items
+- Applicable Rent Restriction and landlord/tenant provisions
+- ODPC breach notification timing and affected-person notice
+- Refund and consumer-law exceptions
+- Email/SMS consent and required sender identity
+- International-transfer safeguards
+- Governing-law dispute and limitation provisions
+- Accessibility standard version

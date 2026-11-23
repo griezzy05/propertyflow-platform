@@ -6,11 +6,17 @@
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js",
-    "test": "node --test"
+    "test": "node --test test/api.test.js",
+    "test:browser": "playwright test"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.883.0",
+    "@aws-sdk/s3-request-presigner": "^3.883.0",
     "pg": "^8.16.3",
     "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
   },
   "engines": {
     "node": ">=20"

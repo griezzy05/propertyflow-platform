@@ -3,5 +3,8 @@ node_modules/
 .env.*
 !.env.example
 data/
+test-results/
+playwright-report/
+logs/
 *.log
 npm-debug.log*

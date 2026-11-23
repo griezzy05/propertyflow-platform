@@ -19,6 +19,20 @@ services:
         value: "true"
       - key: DATABASE_SSL_REJECT_UNAUTHORIZED
         value: "false"
+      - key: STORAGE_BUCKET
+        sync: false
+      - key: STORAGE_REGION
+        sync: false
+      - key: STORAGE_ENDPOINT
+        sync: false
+      - key: STORAGE_ACCESS_KEY_ID
+        sync: false
+      - key: STORAGE_SECRET_ACCESS_KEY
+        sync: false
+      - key: STORAGE_FORCE_PATH_STYLE
+        sync: false
+      - key: REMINDER_SCHEDULER_ENABLED
+        value: "true"
       - key: SESSION_SECRET
         generateValue: true
       - key: BOOTSTRAP_DEVELOPER_NAME

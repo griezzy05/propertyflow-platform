@@ -1,0 +1,240 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 3640" style="width:100vw;height:242.67vw" role="img" aria-labelledby="title description">
+  <title id="title">PropertyFlow end-to-end system flowchart</title>
+  <desc id="description">A connected process chart showing account setup, role access, maintenance, rent payments, and lease renewal or move-out.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#425466"/>
+    </marker>
+    <style>
+      text{font-family:Arial,Helvetica,sans-serif;fill:#172b4d}
+      .title{font-size:36px;font-weight:700}
+      .subtitle{font-size:17px;fill:#526477}
+      .section-title{font-size:21px;font-weight:700;letter-spacing:.5px}
+      .node-title{font-size:17px;font-weight:700}
+      .node-copy{font-size:14px;fill:#40546a}
+      .label{font-size:14px;font-weight:700;fill:#34495e}
+      .panel{fill:#f8fafc;stroke:#d9e2ec;stroke-width:2}
+      .process{fill:#fff;stroke:#52677d;stroke-width:2.5}
+      .developer{fill:#f1edff;stroke:#7657c8}
+      .owner{fill:#eaf3ff;stroke:#3575bf}
+      .tenant{fill:#e8f8f2;stroke:#278a68}
+      .agent{fill:#fff3e5;stroke:#c77822}
+      .system{fill:#edf3f8;stroke:#536d82}
+      .decision{fill:#fff8dc;stroke:#b08516;stroke-width:2.5}
+      .terminal{fill:#e6f5eb;stroke:#2d8150;stroke-width:2.5}
+      .line{fill:none;stroke:#425466;stroke-width:2.5;marker-end:url(#arrow)}
+      .line-no-arrow{fill:none;stroke:#425466;stroke-width:2.5}
+      .dash{stroke-dasharray:7 6}
+    </style>
+  </defs>
+
+  <rect width="1500" height="3640" fill="#fff"/>
+  <text class="title" x="750" y="52" text-anchor="middle">PropertyFlow — end-to-end flowchart</text>
+  <text class="subtitle" x="750" y="82" text-anchor="middle">Follow the arrows. Diamonds are decisions; Yes/No labels show the outcome paths.</text>
+
+  <rect class="panel" x="50" y="110" width="1400" height="1020" rx="12"/>
+  <text class="section-title" x="80" y="148">1 · ACCOUNT SETUP, INVITATIONS &amp; SIGN-IN</text>
+
+  <ellipse class="terminal" cx="750" cy="184" rx="105" ry="30"/>
+  <text class="node-title" x="750" y="190" text-anchor="middle">START</text>
+  <path class="line" d="M750 214 V238"/>
+
+  <rect class="process developer" x="500" y="240" width="500" height="78" rx="6"/>
+  <text class="node-title" x="750" y="270" text-anchor="middle">Developer creates an owner account</text>
+  <text class="node-copy" x="750" y="294" text-anchor="middle">Set tenant-seat capacity (at least 50) and up to 2 agent accounts</text>
+  <path class="line" d="M750 318 V350"/>
+
+  <rect class="process owner" x="500" y="352" width="500" height="78" rx="6"/>
+  <text class="node-title" x="750" y="382" text-anchor="middle">Owner configures the portfolio</text>
+  <text class="node-copy" x="750" y="406" text-anchor="middle">Add properties, units, rent, leases, and primary / backup agents</text>
+  <path class="line" d="M750 430 V462"/>
+
+  <rect class="process owner" x="500" y="464" width="500" height="76" rx="6"/>
+  <text class="node-title" x="750" y="494" text-anchor="middle">Owner sends tenant and agent invitations</text>
+  <text class="node-copy" x="750" y="518" text-anchor="middle">Tenant spaces are allocated only within the owner's available capacity</text>
+  <path class="line" d="M750 540 V550"/>
+
+  <polygon class="decision" points="750,550 865,620 750,690 635,620"/>
+  <text class="node-title" x="750" y="615" text-anchor="middle">Invitation valid</text>
+  <text class="node-copy" x="750" y="636" text-anchor="middle">and not expired?</text>
+  <path class="line" d="M635 620 H438"/>
+  <text class="label" x="525" y="607" text-anchor="middle">NO</text>
+  <rect class="process owner" x="90" y="575" width="340" height="90" rx="6"/>
+  <text class="node-title" x="260" y="610" text-anchor="middle">Owner reissues invite</text>
+  <text class="node-copy" x="260" y="635" text-anchor="middle">Use a fresh, time-limited invitation</text>
+  <path class="line" d="M260 575 V502 H490"/>
+  <text class="label" x="365" y="492" text-anchor="middle">SEND AGAIN</text>
+
+  <path class="line" d="M750 690 V735"/>
+  <text class="label" x="770" y="718">YES</text>
+  <rect class="process tenant" x="500" y="737" width="500" height="72" rx="6"/>
+  <text class="node-title" x="750" y="766" text-anchor="middle">Invitee activates account and sets a password</text>
+  <text class="node-copy" x="750" y="789" text-anchor="middle">Account is linked to its assigned role and property / unit</text>
+  <path class="line" d="M750 809 V844"/>
+
+  <rect class="process system" x="500" y="846" width="500" height="72" rx="6"/>
+  <text class="node-title" x="750" y="875" text-anchor="middle">User signs in</text>
+  <text class="node-copy" x="750" y="898" text-anchor="middle">Server verifies the credentials; passwords are never displayed</text>
+  <path class="line" d="M750 918 V935"/>
+
+  <polygon class="decision" points="750,935 865,1005 750,1075 635,1005"/>
+  <text class="node-title" x="750" y="1000" text-anchor="middle">Credentials</text>
+  <text class="node-copy" x="750" y="1021" text-anchor="middle">accepted?</text>
+  <path class="line" d="M635 1005 H438"/>
+  <text class="label" x="525" y="992" text-anchor="middle">NO</text>
+  <rect class="process system" x="90" y="960" width="340" height="90" rx="6"/>
+  <text class="node-title" x="260" y="995" text-anchor="middle">Use password reset</text>
+  <text class="node-copy" x="260" y="1020" text-anchor="middle">Then return to sign-in</text>
+  <path class="line" d="M260 960 V882 H490"/>
+  <text class="label" x="370" y="871" text-anchor="middle">TRY AGAIN</text>
+  <path class="line" d="M750 1075 V1188"/>
+  <text class="label" x="770" y="1118">YES</text>
+
+  <rect class="panel" x="50" y="1145" width="1400" height="290" rx="12"/>
+  <text class="section-title" x="80" y="1180">2 · ROLE AUTHORIZATION &amp; PRIVATE DASHBOARDS</text>
+  <rect class="process system" x="500" y="1190" width="500" height="68" rx="6"/>
+  <text class="node-title" x="750" y="1218" text-anchor="middle">Server checks role, assignment, and record ownership</text>
+  <text class="node-copy" x="750" y="1241" text-anchor="middle">Only authorized records and actions are returned</text>
+  <path class="line-no-arrow" d="M750 1258 V1280 H230 M750 1280 H1270"/>
+  <path class="line" d="M230 1280 V1300"/>
+  <path class="line" d="M570 1280 V1300"/>
+  <path class="line" d="M930 1280 V1300"/>
+  <path class="line" d="M1270 1280 V1300"/>
+
+  <rect class="process developer" x="70" y="1302" width="320" height="100" rx="6"/>
+  <text class="node-title" x="230" y="1336" text-anchor="middle">DEVELOPER</text>
+  <text class="node-copy" x="230" y="1361" text-anchor="middle">Private platform / admin control</text>
+  <text class="node-copy" x="230" y="1382" text-anchor="middle">Never available to other roles</text>
+  <rect class="process owner" x="410" y="1302" width="320" height="100" rx="6"/>
+  <text class="node-title" x="570" y="1336" text-anchor="middle">OWNER</text>
+  <text class="node-copy" x="570" y="1361" text-anchor="middle">Own properties, tenants, rent,</text>
+  <text class="node-copy" x="570" y="1382" text-anchor="middle">requests, leases, and agents</text>
+  <rect class="process tenant" x="770" y="1302" width="320" height="100" rx="6"/>
+  <text class="node-title" x="930" y="1336" text-anchor="middle">TENANT</text>
+  <text class="node-copy" x="930" y="1361" text-anchor="middle">Own unit, lease, balance,</text>
+  <text class="node-copy" x="930" y="1382" text-anchor="middle">receipts, and requests only</text>
+  <rect class="process agent" x="1130" y="1302" width="320" height="100" rx="6"/>
+  <text class="node-title" x="1290" y="1336" text-anchor="middle">AGENT</text>
+  <text class="node-copy" x="1290" y="1361" text-anchor="middle">Assigned properties and</text>
+  <text class="node-copy" x="1290" y="1382" text-anchor="middle">work orders only</text>
+
+  <rect class="panel" x="50" y="1455" width="1400" height="500" rx="12"/>
+  <text class="section-title" x="80" y="1492">3 · TENANT REQUEST → OWNER REVIEW → AGENT WORK</text>
+  <rect class="process tenant" x="95" y="1540" width="330" height="100" rx="6"/>
+  <text class="node-title" x="260" y="1575" text-anchor="middle">Tenant submits a request</text>
+  <text class="node-copy" x="260" y="1600" text-anchor="middle">Maintenance, safety, or recommendation;</text>
+  <text class="node-copy" x="260" y="1621" text-anchor="middle">include priority, location, and details</text>
+  <path class="line" d="M425 1590 H580"/>
+
+  <rect class="process owner" x="585" y="1540" width="330" height="100" rx="6"/>
+  <text class="node-title" x="750" y="1575" text-anchor="middle">Owner reviews and assigns</text>
+  <text class="node-copy" x="750" y="1600" text-anchor="middle">Prioritize, request information,</text>
+  <text class="node-copy" x="750" y="1621" text-anchor="middle">or assign an authorized agent</text>
+  <path class="line" d="M915 1590 H1070"/>
+
+  <rect class="process agent" x="1075" y="1540" width="330" height="100" rx="6"/>
+  <text class="node-title" x="1240" y="1575" text-anchor="middle">Agent performs assigned work</text>
+  <text class="node-copy" x="1240" y="1600" text-anchor="middle">Update status and add work notes</text>
+  <text class="node-copy" x="1240" y="1621" text-anchor="middle">Only assigned work can be changed</text>
+  <path class="line" d="M1240 1640 V1670"/>
+
+  <polygon class="decision" points="1240,1670 1340,1735 1240,1800 1140,1735"/>
+  <text class="node-title" x="1240" y="1730" text-anchor="middle">Work</text>
+  <text class="node-copy" x="1240" y="1751" text-anchor="middle">complete?</text>
+  <path class="line" d="M1140 1735 H1030 V1845"/>
+  <text class="label" x="1080" y="1720" text-anchor="middle">YES</text>
+  <path class="line" d="M1340 1735 H1430 V1590 H1415"/>
+  <text class="label" x="1390" y="1720">NO</text>
+
+  <rect class="process system" x="500" y="1847" width="530" height="78" rx="6"/>
+  <text class="node-title" x="765" y="1877" text-anchor="middle">Resolve request; notify tenant and owner</text>
+  <text class="node-copy" x="765" y="1901" text-anchor="middle">Record status changes and responsible users in audit history</text>
+
+  <rect class="panel" x="50" y="1975" width="1400" height="930" rx="12"/>
+  <text class="section-title" x="80" y="2012">4 · RENT PAYMENT, VERIFICATION &amp; RECEIPT</text>
+  <text class="node-copy" x="80" y="2040">Online M-Pesa requires configured credentials and internet. Manual bank / cash recording remains available to the owner.</text>
+  <rect class="process tenant" x="520" y="2060" width="460" height="72" rx="6"/>
+  <text class="node-title" x="750" y="2089" text-anchor="middle">Tenant checks due date and balance</text>
+  <text class="node-copy" x="750" y="2112" text-anchor="middle">Choose an available payment route</text>
+  <path class="line" d="M750 2132 V2145"/>
+
+  <polygon class="decision" points="750,2145 850,2210 750,2275 650,2210"/>
+  <text class="node-title" x="750" y="2205" text-anchor="middle">M-Pesa</text>
+  <text class="node-copy" x="750" y="2226" text-anchor="middle">available?</text>
+
+  <path class="line" d="M650 2210 H440 V2370 H435"/>
+  <text class="label" x="520" y="2197" text-anchor="middle">NO</text>
+  <rect class="process tenant" x="80" y="2325" width="350" height="88" rx="6"/>
+  <text class="node-title" x="255" y="2360" text-anchor="middle">Tenant pays by bank / cash</text>
+  <text class="node-copy" x="255" y="2385" text-anchor="middle">Submit reference or payment details</text>
+  <path class="line" d="M255 2413 V2440"/>
+
+  <rect class="process owner" x="80" y="2442" width="350" height="82" rx="6"/>
+  <text class="node-title" x="255" y="2475" text-anchor="middle">Owner verifies manual payment</text>
+  <text class="node-copy" x="255" y="2499" text-anchor="middle">Match amount, date, and reference</text>
+  <path class="line" d="M255 2524 V2540"/>
+
+  <polygon class="decision" points="255,2540 355,2605 255,2670 155,2605"/>
+  <text class="node-title" x="255" y="2600" text-anchor="middle">Confirmed?</text>
+  <path class="line" d="M355 2605 H480 V2690 H510"/>
+  <text class="label" x="405" y="2592" text-anchor="middle">YES</text>
+  <path class="line" d="M155 2605 H62 V2788 H510"/>
+  <text class="label" x="105" y="2592" text-anchor="middle">NO</text>
+
+  <path class="line" d="M850 2210 H1060 V2370 H1065"/>
+  <text class="label" x="930" y="2197" text-anchor="middle">YES</text>
+  <rect class="process tenant" x="1070" y="2325" width="350" height="88" rx="6"/>
+  <text class="node-title" x="1245" y="2360" text-anchor="middle">Tenant starts M-Pesa STK payment</text>
+  <text class="node-copy" x="1245" y="2385" text-anchor="middle">Provider sends result to callback</text>
+  <path class="line" d="M1245 2413 V2440"/>
+
+  <polygon class="decision" points="1245,2440 1345,2505 1245,2570 1145,2505"/>
+  <text class="node-title" x="1245" y="2500" text-anchor="middle">Callback</text>
+  <text class="node-copy" x="1245" y="2521" text-anchor="middle">validated?</text>
+  <path class="line" d="M1145 2505 H1020 V2690 H990"/>
+  <text class="label" x="1080" y="2492" text-anchor="middle">YES</text>
+  <path class="line" d="M1345 2505 H1438 V2788 H990"/>
+  <text class="label" x="1380" y="2492">NO</text>
+
+  <rect class="process system" x="510" y="2692" width="480" height="72" rx="6"/>
+  <text class="node-title" x="750" y="2721" text-anchor="middle">Record verified payment and issue receipt</text>
+  <text class="node-copy" x="750" y="2744" text-anchor="middle">Update balance, payment history, and next due amount</text>
+  <path class="line" d="M750 2764 V2780"/>
+  <rect class="process system" x="510" y="2782" width="480" height="72" rx="6"/>
+  <text class="node-title" x="750" y="2811" text-anchor="middle">Unconfirmed / failed payment stays unpaid</text>
+  <text class="node-copy" x="750" y="2834" text-anchor="middle">No receipt is issued; owner follows up and tenant is notified</text>
+
+  <rect class="panel" x="50" y="2925" width="1400" height="610" rx="12"/>
+  <text class="section-title" x="80" y="2962">5 · LEASE EXPIRY, RENEWAL OR MOVE-OUT</text>
+  <rect class="process owner" x="520" y="3000" width="460" height="76" rx="6"/>
+  <text class="node-title" x="750" y="3031" text-anchor="middle">System flags upcoming lease expiry</text>
+  <text class="node-copy" x="750" y="3055" text-anchor="middle">Notify owner; review renewal and planned move-out</text>
+  <path class="line" d="M750 3076 V3095"/>
+
+  <polygon class="decision" points="750,3095 855,3165 750,3235 645,3165"/>
+  <text class="node-title" x="750" y="3160" text-anchor="middle">Renew lease?</text>
+  <path class="line" d="M645 3165 H558 V3300 H555"/>
+  <text class="label" x="600" y="3152" text-anchor="middle">YES</text>
+  <rect class="process owner" x="105" y="3255" width="450" height="92" rx="6"/>
+  <text class="node-title" x="330" y="3290" text-anchor="middle">Create next lease; preserve history</text>
+  <text class="node-copy" x="330" y="3316" text-anchor="middle">Keep the tenant assignment and occupied unit</text>
+
+  <path class="line" d="M855 3165 H942 V3300 H945"/>
+  <text class="label" x="900" y="3152" text-anchor="middle">NO</text>
+  <rect class="process owner" x="945" y="3255" width="450" height="92" rx="6"/>
+  <text class="node-title" x="1170" y="3290" text-anchor="middle">Complete move-out and close lease</text>
+  <text class="node-copy" x="1170" y="3316" text-anchor="middle">Revoke tenant access; free the unit and tenant seat</text>
+  <path class="line" d="M1170 3347 V3380"/>
+  <rect class="process owner" x="945" y="3382" width="450" height="72" rx="6"/>
+  <text class="node-title" x="1170" y="3411" text-anchor="middle">Prepare unit and invite the next tenant</text>
+  <text class="node-copy" x="1170" y="3434" text-anchor="middle">Continue from the invitation step when ready</text>
+
+  <path class="line-no-arrow" d="M330 3347 V3460 H750 M1170 3454 V3460"/>
+  <path class="line" d="M750 3460 V3470"/>
+  <ellipse class="terminal" cx="750" cy="3500" rx="150" ry="30"/>
+  <text class="node-title" x="750" y="3506" text-anchor="middle">CONTINUE OPERATIONS</text>
+
+  <rect x="50" y="3560" width="1400" height="58" rx="8" fill="#f1f5f9" stroke="#d9e2ec" stroke-width="2"/>
+  <text class="node-copy" x="750" y="3584" text-anchor="middle">Across every stage: keep an audit trail, send configured notifications, and enforce role-based access.</text>
+  <text class="node-copy" x="750" y="3605" text-anchor="middle">Offline laptop data stays local; hosted Render data is separate and is not automatically synchronized.</text>
+</svg>
