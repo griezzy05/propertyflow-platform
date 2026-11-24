@@ -85,6 +85,20 @@ test('all account types render their dashboards and core controls', async ({ pag
     await page.getByRole('button', { name: role.button, exact: true }).click();
     await expect(page.getByRole('heading', { name: role.heading })).toBeVisible();
     await expect(page.getByRole('heading', { name: role.section })).toBeVisible();
+    if (role.button === 'Developer') {
+      await expect(page.getByRole('heading', { name: 'Platform service payments' })).toBeVisible();
+      await page.getByRole('button', { name: '+ Record owner payment' }).click();
+      await expect(page.getByRole('heading', { name: 'Record owner service payment' })).toBeVisible();
+      await expect(page.getByText('The entry will stay pending and will not count as received revenue')).toBeVisible();
+      await page.locator('#modalForm').getByRole('button', { name: 'Cancel' }).click();
+    } else if (role.button === 'Tenant') {
+      await page.getByRole('button', { name: 'Pay with M-Pesa' }).click();
+      await expect(page.getByRole('heading', { name: 'Pay rent with M-Pesa' })).toBeVisible();
+      await expect(page.locator('#modalForm')).toContainText('Sandbox Test Merchant');
+      await expect(page.locator('#modalForm')).toContainText('174379');
+      await expect(page.locator('#modalForm')).toContainText('no real funds will be transferred');
+      await page.locator('#modalForm').getByRole('button', { name: 'Cancel' }).click();
+    }
     await expect(page.getByRole('heading', { name: 'Your workflow guide' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open full flowchart' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();

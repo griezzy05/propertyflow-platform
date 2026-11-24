@@ -67,6 +67,11 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
       PORT: String(port),
       APP_BASE_URL: `http://127.0.0.1:${port}`,
       PROPERTYFLOW_STORE_FILE: storeFile,
+      DARAJA_ENVIRONMENT: 'sandbox',
+      DARAJA_SHORTCODE: '174379',
+      DARAJA_RECIPIENT_NAME: 'Sandbox Test Merchant',
+      DARAJA_CONSUMER_KEY: '',
+      DARAJA_CALLBACK_TOKEN: '',
       STORAGE_BUCKET: 'test-bucket',
       STORAGE_REGION: 'us-east-1',
       STORAGE_ENDPOINT: objectStore.endpoint,
@@ -185,6 +190,9 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   const config = await api('/api/config');
   assert.equal(config.demoAccountsEnabled, true);
   assert.equal(config.mpesaEnabled, false);
+  assert.equal(config.mpesaEnvironment, 'sandbox');
+  assert.equal(config.mpesaShortcode, '174379');
+  assert.equal(config.mpesaRecipientName, 'Sandbox Test Merchant');
   assert.equal(config.fileStorageEnabled, true);
 
   const developer = await login('developer@propertyflow.local', 'Welcome123!');
@@ -209,6 +217,62 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   assert.equal(developerOwnerView.role, 'owner');
   assert.equal(developerOwnerView.readOnlyDeveloperView, true);
   await api(`/api/dashboard?ownerId=${encodeURIComponent(ownerInvite.owner.id)}`, 'GET', undefined, owner, 403);
+  const pendingPlatformPayment = await api('/api/platform-payments', 'POST', {
+    ownerId: ownerInvite.owner.id,
+    amount: 1500,
+    method: 'mpesa',
+    reference: 'OWNER-SERVICE-001',
+    paidOn: '2026-11-24'
+  }, developer, 201);
+  assert.equal(pendingPlatformPayment.payment.status, 'pending');
+  await api('/api/platform-payments', 'POST', {
+    ownerId: ownerInvite.owner.id,
+    amount: 1500,
+    method: 'mpesa',
+    reference: 'owner-service-001',
+    paidOn: '2026-11-24'
+  }, developer, 409);
+  await api('/api/platform-payments', 'POST', {
+    ownerId: ownerInvite.owner.id,
+    amount: -1,
+    method: 'mpesa',
+    reference: 'OWNER-SERVICE-INVALID',
+    paidOn: '2026-11-24'
+  }, developer, 422);
+  await api('/api/platform-payments', 'POST', {
+    ownerId: ownerInvite.owner.id,
+    amount: 1500,
+    method: 'mpesa',
+    reference: 'OWNER-SERVICE-FORBIDDEN',
+    paidOn: '2026-11-24'
+  }, owner, 403);
+  let developerDashboard = await api('/api/dashboard', 'GET', undefined, developer);
+  assert.equal(developerDashboard.metrics.platformRevenueReceived, 0);
+  assert.equal(developerDashboard.metrics.platformPaymentsPending, 1500);
+  assert.equal(developerDashboard.platformPayments[0].ownerName, 'Test Owner');
+  assert.equal((await api('/api/dashboard', 'GET', undefined, owner)).platformPayments, undefined);
+  await api(`/api/platform-payments/${pendingPlatformPayment.payment.id}/review`, 'PATCH', {
+    action: 'confirm'
+  }, developer);
+  developerDashboard = await api('/api/dashboard', 'GET', undefined, developer);
+  assert.equal(developerDashboard.metrics.platformRevenueReceived, 1500);
+  assert.equal(developerDashboard.metrics.platformPaymentsPending, 0);
+  await api(`/api/platform-payments/${pendingPlatformPayment.payment.id}/review`, 'PATCH', {
+    action: 'confirm'
+  }, developer, 409);
+  const rejectedPlatformPayment = await api('/api/platform-payments', 'POST', {
+    ownerId: ownerInvite.owner.id,
+    amount: 2500,
+    method: 'bank',
+    reference: 'OWNER-SERVICE-002',
+    paidOn: '2026-11-24'
+  }, developer, 201);
+  await api(`/api/platform-payments/${rejectedPlatformPayment.payment.id}/review`, 'PATCH', {
+    action: 'reject'
+  }, developer);
+  developerDashboard = await api('/api/dashboard', 'GET', undefined, developer);
+  assert.equal(developerDashboard.metrics.platformRevenueReceived, 1500);
+  assert.equal(developerDashboard.platformPayments[0].status, 'rejected');
   const welcome = await api('/api/notifications', 'GET', undefined, owner);
   assert.equal(welcome.unreadCount, 1);
   const welcomeNotification = welcome.notifications[0];

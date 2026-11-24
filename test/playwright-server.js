@@ -13,6 +13,11 @@ async function start() {
   process.env.APP_BASE_URL = 'http://127.0.0.1:3100';
   process.env.PROPERTYFLOW_STORE_FILE = storeFile;
   process.env.DATABASE_URL = '';
+  process.env.DARAJA_ENVIRONMENT = 'sandbox';
+  process.env.DARAJA_CONSUMER_KEY = 'test-consumer-key';
+  process.env.DARAJA_CALLBACK_TOKEN = 'test-callback-token';
+  process.env.DARAJA_SHORTCODE = '174379';
+  process.env.DARAJA_RECIPIENT_NAME = 'Sandbox Test Merchant';
   process.env.STORAGE_BUCKET = '';
   process.env.REMINDER_SCHEDULER_ENABLED = 'false';
 

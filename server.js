@@ -131,6 +131,7 @@ function initialStore() {
       { id: 'move_2', ownerId: 'owner_1', tenant: 'Erick Kariuki', unit: 'C-09', property: 'Maple Court', date: '2026-12-05', status: 'lease_renewal' }
     ],
     payments: [],
+    platformPayments: [],
     notifications: [],
     files: [],
     reminderSettings: {},
@@ -159,6 +160,7 @@ function emptyProductionStore() {
     workOrders: [],
     moveOuts: [],
     payments: [],
+    platformPayments: [],
     files: [],
     reminderSettings: {},
     reminderHistory: [],
@@ -170,6 +172,7 @@ function emptyProductionStore() {
 function normalizeStore(value) {
   value.sessions ||= {};
   value.payments ||= [];
+  value.platformPayments ||= [];
   value.notifications ||= [];
   value.files ||= [];
   value.reminderSettings ||= {};
@@ -979,11 +982,21 @@ function dashboardFor(user) {
       agentSeatsUsed: store.users.filter(agent => agent.role === 'agent'
         && [owner.id, ...(owner.ownerIds || [])].includes(agent.ownerId)).length
     }));
-    return { role: user.role, profile: publicUser(user), owners, metrics: {
+    const platformPayments = store.platformPayments
+      .map(payment => ({
+        ...payment,
+        ownerName: store.users.find(item => item.id === payment.ownerId)?.name || 'Unknown owner'
+      }))
+      .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt));
+    return { role: user.role, profile: publicUser(user), owners, platformPayments, metrics: {
       activeOwners: owners.filter(owner => owner.status === 'active').length,
       tenantSeatsUsed: owners.reduce((sum, owner) => sum + owner.tenantSeatsUsed, 0),
       tenantSeatAllocation: owners.reduce((sum, owner) => sum + owner.tenantSeatAllocation, 0),
-      agentSeatsAssigned: owners.reduce((sum, owner) => sum + owner.agentSeatsUsed, 0)
+      agentSeatsAssigned: owners.reduce((sum, owner) => sum + owner.agentSeatsUsed, 0),
+      platformRevenueReceived: platformPayments.filter(payment => payment.status === 'confirmed')
+        .reduce((sum, payment) => sum + payment.amount, 0),
+      platformPaymentsPending: platformPayments.filter(payment => payment.status === 'pending')
+        .reduce((sum, payment) => sum + payment.amount, 0)
     } };
   }
   if (user.role === 'owner') {
@@ -1068,6 +1081,9 @@ async function handleApi(req, res, url) {
     return send(res, 200, {
       demoAccountsEnabled: process.env.NODE_ENV !== 'production',
       mpesaEnabled: Boolean(process.env.DARAJA_CONSUMER_KEY && process.env.DARAJA_CALLBACK_TOKEN),
+      mpesaEnvironment: process.env.DARAJA_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
+      mpesaShortcode: process.env.DARAJA_SHORTCODE || null,
+      mpesaRecipientName: process.env.DARAJA_RECIPIENT_NAME || null,
       fileStorageEnabled: isStorageConfigured(),
       currency: 'KES'
     });
@@ -1216,6 +1232,65 @@ async function handleApi(req, res, url) {
     }
     return send(res, 200, dashboardFor(user));
     return;
+  }
+  if (method === 'POST' && url.pathname === '/api/platform-payments') {
+    const user = requireUser(req, res, ['developer']);
+    if (!user) return;
+    const body = await readJson(req);
+    const owner = store.users.find(item => item.id === body.ownerId && item.role === 'owner');
+    const amount = Number(body.amount);
+    const methodName = String(body.method || '');
+    const reference = String(body.reference || '').trim().slice(0, 100);
+    const paidOn = String(body.paidOn || '');
+    if (!owner) return error(res, 422, 'Choose a property owner account.');
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000) {
+      return error(res, 422, 'Enter a valid payment amount.');
+    }
+    if (!['mpesa', 'bank', 'cash', 'other'].includes(methodName)) {
+      return error(res, 422, 'Choose a valid payment method.');
+    }
+    if (!reference) return error(res, 422, 'Enter the payment receipt or transaction reference.');
+    if (!validDate(paidOn)) return error(res, 422, 'Enter a valid payment date.');
+    if (store.platformPayments.some(item => item.reference.toLowerCase() === reference.toLowerCase())) {
+      return error(res, 409, 'That platform payment reference has already been recorded.');
+    }
+    const payment = {
+      id: id('platform_payment'),
+      ownerId: owner.id,
+      amount,
+      currency: 'KES',
+      method: methodName,
+      reference,
+      paidOn,
+      status: 'pending',
+      recordedAt: new Date().toISOString(),
+      recordedBy: user.id
+    };
+    store.platformPayments.unshift(payment);
+    recordAudit(user, 'platform_payment.recorded', payment.id, {
+      ownerId: owner.id, amount, method: methodName, reference, paidOn
+    });
+    await saveStore(store);
+    return send(res, 201, { payment: { ...payment, ownerName: owner.name } });
+  }
+  const platformPaymentReviewMatch = url.pathname.match(/^\/api\/platform-payments\/([^/]+)\/review$/);
+  if (method === 'PATCH' && platformPaymentReviewMatch) {
+    const user = requireUser(req, res, ['developer']);
+    if (!user) return;
+    const payment = store.platformPayments.find(item => item.id === platformPaymentReviewMatch[1]);
+    if (!payment) return error(res, 404, 'Platform payment not found.');
+    if (payment.status !== 'pending') return error(res, 409, 'Only unconfirmed platform payments can be reviewed.');
+    const body = await readJson(req);
+    if (!['confirm', 'reject'].includes(body.action)) return error(res, 422, 'Choose confirm or reject.');
+    payment.status = body.action === 'confirm' ? 'confirmed' : 'rejected';
+    payment.reviewedAt = new Date().toISOString();
+    payment.reviewedBy = user.id;
+    if (body.action === 'confirm') payment.confirmedAt = payment.reviewedAt;
+    recordAudit(user, `platform_payment.${payment.status}`, payment.id, {
+      ownerId: payment.ownerId, amount: payment.amount, reference: payment.reference
+    });
+    await saveStore(store);
+    return send(res, 200, { payment });
   }
   if (method === 'GET' && url.pathname === '/api/notifications') {
     const user = requireUser(req, res);
