@@ -282,6 +282,7 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
 
   const seededOwner = await login('owner@propertyflow.local', 'Welcome123!');
   const seededOwnerDashboard = await api('/api/dashboard', 'GET', undefined, seededOwner);
+  assert.equal(seededOwnerDashboard.paymentSettings.mpesaPhone.enabled, false);
   assert.ok(seededOwnerDashboard.units.some(unit => unit.unitNumber === 'B-12'));
   assert.ok(seededOwnerDashboard.leases.some(lease => lease.tenantName === 'Brian Otieno'));
 
@@ -332,12 +333,54 @@ test('role workflows, invitations, unit tracking, and payment configuration', as
   await activate(tenantInvite.invitationPath, 'SecureTenantPass123!');
   let tenant = await login('test-tenant@example.test', 'SecureTenantPass123!');
 
+  const paymentSettings = {
+    mpesaPhone: { enabled: true, phoneNumber: '0712345678', recipientName: 'Test Owner' },
+    mpesaPaybill: { enabled: false, type: 'paybill', number: '', accountReference: '', recipientName: '' },
+    mpesaBank: { enabled: false, bankName: '', paybillNumber: '', accountNumber: '', accountName: '' },
+    bankTransfer: { enabled: true, bankName: 'Test Bank', accountName: 'Test Owner', accountNumber: '123456789', branch: 'Nairobi' },
+    cash: { enabled: true, instructions: 'Pay the owner and request a receipt.' }
+  };
+  await api('/api/payment-settings', 'PATCH', {
+    mpesaPhone: { enabled: true, phoneNumber: '123', recipientName: '' }
+  }, owner, 422);
+  await api('/api/payment-settings', 'PATCH', paymentSettings, owner);
+  await api('/api/payment-settings', 'PATCH', paymentSettings, tenant, 403);
   const tenantDashboard = await api('/api/dashboard', 'GET', undefined, tenant);
   assert.equal(tenantDashboard.metrics.currentBalance, 25000);
+  assert.equal(tenantDashboard.paymentSettings.mpesaPhone.phoneNumber, '+254712345678');
+  assert.equal(tenantDashboard.paymentSettings.bankTransfer.accountNumber, '123456789');
   assert.equal(tenantDashboard.property.occupiedUnits, 1);
   assert.equal(tenantDashboard.unit.id, unit.id);
   assert.equal(tenantDashboard.lease.depositAmount, 25000);
   assert.equal(tenantDashboard.lease.status, 'active');
+  const tenantPaymentReport = await api('/api/payments/tenant-report', 'POST', {
+    method: 'mpesa_phone',
+    amount: 5000,
+    reference: 'TENANT-MPESA-001'
+  }, tenant, 201);
+  assert.equal(tenantPaymentReport.payment.status, 'review');
+  assert.equal((await api('/api/dashboard', 'GET', undefined, tenant)).metrics.currentBalance, 25000);
+  await api('/api/payments/tenant-report', 'POST', {
+    method: 'mpesa_paybill',
+    amount: 1000,
+    reference: 'TENANT-DISABLED-METHOD'
+  }, tenant, 422);
+  await api('/api/payments/tenant-report', 'POST', {
+    method: 'bank',
+    amount: 25000,
+    reference: 'TENANT-OVER-REPORT'
+  }, tenant, 409);
+  await api('/api/payments/tenant-report', 'POST', {
+    method: 'mpesa_phone',
+    amount: 1000,
+    reference: 'tenant-mpesa-001'
+  }, tenant, 409);
+  assert.ok((await api('/api/dashboard', 'GET', undefined, owner)).payments
+    .some(payment => payment.id === tenantPaymentReport.payment.id && payment.status === 'review'));
+  await api(`/api/payments/${tenantPaymentReport.payment.id}/reconcile`, 'PATCH', {
+    action: 'reject',
+    reason: 'Rejected as part of the payment workflow test.'
+  }, owner);
   const leasePdf = Buffer.from('%PDF-1.7\nprivate test lease', 'ascii');
   const uploadedLease = await upload(
     `/api/files?purpose=lease-document&leaseId=${tenantDashboard.lease.id}&name=signed-lease.pdf`,

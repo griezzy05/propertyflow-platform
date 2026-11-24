@@ -15,7 +15,7 @@ Answers to common setup and product questions.
 Each role sees only authorised information.
 
 ## Payments
-M-Pesa, bank, and cash records depend on the available provider and owner process.
+The owner configures the accepted M-Pesa, bank, and cash methods. Tenants pay to the displayed owner destination and submit a transaction or receipt reference; the owner verifies it before it counts as paid. PropertyFlow does not receive or hold manually reported rent. STK checkout is available only when the configured Daraja shortcode matches the owner's registered destination.
 
 ## QR codes
 QR labels link to sign-in and do not publish tenant details.

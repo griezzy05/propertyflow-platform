@@ -26,6 +26,9 @@ Generate a label, print/download it, attach it to the unit, and replace the toke
 ## Manage rent
 Review rent roll, record or reconcile payments, change rent with an effective date, and export reports.
 
+## Configure payment methods
+In **Tenant payment methods**, enable only the options you accept and enter the destination details tenants should see: your M-Pesa number, your Paybill/Till, an M-Pesa bank Paybill/account, a bank transfer account, or cash instructions. Details are shared with your own tenants. Review tenant-submitted transaction or receipt references in **Payment reconciliation** and confirm only after checking your M-Pesa/bank records or cash receipt. PropertyFlow records these payments but does not collect or hold them.
+
 ## Company and contact placeholders
 - [COMPANY LEGAL NAME]
 - [REGISTERED ADDRESS]

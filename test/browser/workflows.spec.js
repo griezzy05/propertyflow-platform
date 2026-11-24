@@ -92,12 +92,8 @@ test('all account types render their dashboards and core controls', async ({ pag
       await expect(page.getByText('The entry will stay pending and will not count as received revenue')).toBeVisible();
       await page.locator('#modalForm').getByRole('button', { name: 'Cancel' }).click();
     } else if (role.button === 'Tenant') {
-      await page.getByRole('button', { name: 'Pay with M-Pesa' }).click();
-      await expect(page.getByRole('heading', { name: 'Pay rent with M-Pesa' })).toBeVisible();
-      await expect(page.locator('#modalForm')).toContainText('Sandbox Test Merchant');
-      await expect(page.locator('#modalForm')).toContainText('174379');
-      await expect(page.locator('#modalForm')).toContainText('no real funds will be transferred');
-      await page.locator('#modalForm').getByRole('button', { name: 'Cancel' }).click();
+      await page.getByRole('button', { name: 'Choose payment method' }).click();
+      await expect(page.getByText('Your property owner has not configured any rent payment methods yet.')).toBeVisible();
     }
     await expect(page.getByRole('heading', { name: 'Your workflow guide' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open full flowchart' })).toBeVisible();
@@ -132,6 +128,68 @@ test('all account types render their dashboards and core controls', async ({ pag
 
   expect(pageErrors).toEqual([]);
   expect(serverErrors).toEqual([]);
+});
+
+test('owner configures direct payment methods and tenant submits a reference for verification', async ({ page }) => {
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Owner', exact: true }).click();
+  const settings = page.locator('#paymentSettingsForm');
+  await settings.locator('[name="mpesaPhoneEnabled"]').check();
+  await settings.locator('[name="mpesaPhoneNumber"]').fill('0712345678');
+  await settings.locator('[name="mpesaPhoneRecipientName"]').fill('Amina Hassan');
+  await settings.locator('[name="mpesaPaybillEnabled"]').check();
+  await settings.locator('[name="mpesaPaybillType"]').selectOption('paybill');
+  await settings.locator('[name="mpesaPaybillNumber"]').fill('123456');
+  await settings.locator('[name="mpesaPaybillReference"]').fill('MAPLE-RENT');
+  await settings.locator('[name="mpesaPaybillRecipientName"]').fill('Amina Hassan');
+  await settings.locator('[name="mpesaBankEnabled"]').check();
+  await settings.locator('[name="mpesaBankName"]').fill('Test Bank');
+  await settings.locator('[name="mpesaBankPaybillNumber"]').fill('654321');
+  await settings.locator('[name="mpesaBankAccountNumber"]').fill('123456789');
+  await settings.locator('[name="mpesaBankAccountName"]').fill('Amina Hassan');
+  await settings.locator('[name="bankTransferEnabled"]').check();
+  await settings.locator('[name="bankTransferBankName"]').fill('Test Bank');
+  await settings.locator('[name="bankTransferAccountName"]').fill('Amina Hassan');
+  await settings.locator('[name="bankTransferAccountNumber"]').fill('987654321');
+  await settings.locator('[name="bankTransferBranch"]').fill('Nairobi');
+  await settings.locator('[name="cashEnabled"]').check();
+  await settings.locator('[name="cashInstructions"]').fill('Pay at the management office and ask for a receipt.');
+  await settings.getByRole('button', { name: 'Save payment methods' }).click();
+  await expect(page.getByText('Tenant payment methods saved.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Tenant', exact: true }).click();
+  await page.getByRole('button', { name: 'Choose payment method' }).click();
+  await expect(page.getByRole('heading', { name: 'Choose rent payment method' })).toBeVisible();
+  await expect(page.locator('#rentPaymentInstructions')).toContainText('Amina Hassan');
+  await page.locator('#modalForm [name="method"]').selectOption('bank');
+  await expect(page.locator('#rentPaymentInstructions')).toContainText('987654321');
+  await page.locator('#modalForm [name="amount"]').fill('1000');
+  await page.locator('#modalForm [name="reference"]').fill('BROWSER-RENT-TRANSFER-1');
+  await page.getByRole('button', { name: 'Submit for owner verification' }).click();
+  await expect(page.getByText('Payment submitted for owner verification.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.getByRole('button', { name: 'Owner', exact: true }).click();
+  const reconciliationCard = page.locator('#propertyFeatures .card').filter({ hasText: 'Payment reconciliation' });
+  const review = reconciliationCard.locator('.request').filter({ hasText: 'BROWSER-RENT-TRANSFER-1' });
+  await expect(review).toContainText('Brian Otieno');
+  await review.getByRole('button', { name: 'Confirm' }).click();
+  await expect(page.getByText('Payment review updated.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  const tenantLogin = page.waitForResponse(response => response.url().endsWith('/api/auth/login'));
+  const tenantDashboardResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/dashboard');
+  await page.getByRole('button', { name: 'Tenant', exact: true }).click();
+  expect((await tenantLogin).status()).toBe(200);
+  expect((await tenantDashboardResponse).status()).toBe(200);
+  await expect(page.getByRole('heading', { name: /Welcome home/ })).toBeVisible();
+  const receipts = page.locator('#propertyFeatures .card').filter({ hasText: 'Payment receipts' });
+  await expect(receipts.getByText('BROWSER-RENT-TRANSFER-1')).toBeVisible();
+  expect(pageErrors).toEqual([]);
 });
 
 test('developer creates an owner and the owner activates and signs in', async ({ page }) => {

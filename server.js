@@ -132,6 +132,7 @@ function initialStore() {
     ],
     payments: [],
     platformPayments: [],
+    ownerPaymentSettings: {},
     notifications: [],
     files: [],
     reminderSettings: {},
@@ -161,6 +162,7 @@ function emptyProductionStore() {
     moveOuts: [],
     payments: [],
     platformPayments: [],
+    ownerPaymentSettings: {},
     files: [],
     reminderSettings: {},
     reminderHistory: [],
@@ -173,6 +175,7 @@ function normalizeStore(value) {
   value.sessions ||= {};
   value.payments ||= [];
   value.platformPayments ||= [];
+  value.ownerPaymentSettings ||= {};
   value.notifications ||= [];
   value.files ||= [];
   value.reminderSettings ||= {};
@@ -300,6 +303,20 @@ function validDate(value) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const date = new Date(`${value}T00:00:00.000Z`);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function emptyOwnerPaymentSettings() {
+  return {
+    mpesaPhone: { enabled: false, phoneNumber: '', recipientName: '' },
+    mpesaPaybill: { enabled: false, type: 'paybill', number: '', accountReference: '', recipientName: '' },
+    mpesaBank: { enabled: false, bankName: '', paybillNumber: '', accountNumber: '', accountName: '' },
+    bankTransfer: { enabled: false, bankName: '', accountName: '', accountNumber: '', branch: '' },
+    cash: { enabled: false, instructions: '' }
+  };
+}
+
+function ownerPaymentSettingsFor(ownerId) {
+  return store.ownerPaymentSettings[ownerId] || emptyOwnerPaymentSettings();
 }
 
 function recordAudit(actor, action, subjectId, details = {}) {
@@ -505,6 +522,7 @@ async function startMpesaPayment(user, phone) {
   const rentAmount = lease ? rentAt(lease, dueDate) : user.rentAmount;
   const timestamp = darajaTimestamp();
   const shortcode = process.env.DARAJA_SHORTCODE;
+  const destination = ownerPaymentSettingsFor(user.ownerId).mpesaPaybill;
   const password = Buffer.from(`${shortcode}${process.env.DARAJA_PASSKEY}${timestamp}`).toString('base64');
   const callbackToken = process.env.DARAJA_CALLBACK_TOKEN;
   const callbackUrl = new URL(`/api/payments/mpesa/callback/${encodeURIComponent(callbackToken)}`, APP_BASE_URL).toString();
@@ -516,10 +534,10 @@ async function startMpesaPayment(user, phone) {
       BusinessShortCode: shortcode,
       Password: password,
       Timestamp: timestamp,
-      TransactionType: process.env.DARAJA_TRANSACTION_TYPE || 'CustomerPayBillOnline',
+      TransactionType: destination.type === 'till' ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline',
       Amount: Math.ceil(rentAmount),
       PartyA: phoneNumber,
-      PartyB: shortcode,
+      PartyB: destination.number,
       PhoneNumber: phoneNumber,
       CallBackURL: callbackUrl,
       AccountReference: `PF${user.id.replace(/[^A-Za-z0-9]/g, '').slice(-10)}`,
@@ -1035,7 +1053,7 @@ function dashboardFor(user) {
       currentRent: rentAt(lease)
     }));
     const ownerSeatUsage = user.tenantSeatsUsed;
-    return { role: user.role, profile: publicUser(user), owners, properties, units, leases, tenants, requests, payments, moveOuts: store.moveOuts.filter(item => ownerIds.includes(item.ownerId)), agents, metrics: {
+    return { role: user.role, profile: publicUser(user), owners, properties, units, leases, tenants, requests, payments, paymentSettings: ownerPaymentSettingsFor(user.id), moveOuts: store.moveOuts.filter(item => ownerIds.includes(item.ownerId)), agents, metrics: {
       totalUnits: properties.reduce((sum, property) => sum + property.totalUnits, 0),
       occupiedUnits: properties.reduce((sum, property) => sum + property.occupiedUnits, 0),
       vacantUnits: properties.reduce((sum, property) => sum + property.totalUnits - property.occupiedUnits, 0),
@@ -1062,7 +1080,7 @@ function dashboardFor(user) {
         attachments: store.files.filter(file => file.leaseId === lease.id).map(publicFile),
         currentRent: rentAmount
       } : null,
-      payments, notifications, requests: store.requests.filter(item => item.tenantId === user.id).map(requestView),
+      payments, paymentSettings: ownerPaymentSettingsFor(user.ownerId), notifications, requests: store.requests.filter(item => item.tenantId === user.id).map(requestView),
       metrics: { currentBalance, nextRentDue: user.nextRentDue, rentAmount }
     };
   }
@@ -1080,7 +1098,7 @@ async function handleApi(req, res, url) {
   if (method === 'GET' && url.pathname === '/api/config') {
     return send(res, 200, {
       demoAccountsEnabled: process.env.NODE_ENV !== 'production',
-      mpesaEnabled: Boolean(process.env.DARAJA_CONSUMER_KEY && process.env.DARAJA_CALLBACK_TOKEN),
+      mpesaEnabled: Boolean(process.env.DARAJA_CONSUMER_KEY && process.env.DARAJA_CALLBACK_TOKEN && process.env.DARAJA_OWNER_ID),
       mpesaEnvironment: process.env.DARAJA_ENVIRONMENT === 'production' ? 'production' : 'sandbox',
       mpesaShortcode: process.env.DARAJA_SHORTCODE || null,
       mpesaRecipientName: process.env.DARAJA_RECIPIENT_NAME || null,
@@ -1232,6 +1250,79 @@ async function handleApi(req, res, url) {
     }
     return send(res, 200, dashboardFor(user));
     return;
+  }
+  if (method === 'PATCH' && url.pathname === '/api/payment-settings') {
+    const user = requireUser(req, res, ['owner']);
+    if (!user) return;
+    const body = await readJson(req);
+    const mpesaPhoneInput = body.mpesaPhone || {};
+    const mpesaPaybillInput = body.mpesaPaybill || {};
+    const mpesaBankInput = body.mpesaBank || {};
+    const bankTransferInput = body.bankTransfer || {};
+    const cashInput = body.cash || {};
+    const mpesaPhone = normalizeKenyanPhone(mpesaPhoneInput.phoneNumber);
+    const mpesaPaybillType = String(mpesaPaybillInput.type || '');
+    const mpesaPaybillNumber = String(mpesaPaybillInput.number || '').trim();
+    const mpesaPaybillReference = String(mpesaPaybillInput.accountReference || '').trim().slice(0, 80);
+    const mpesaBankPaybill = String(mpesaBankInput.paybillNumber || '').trim();
+    const mpesaBankAccount = String(mpesaBankInput.accountNumber || '').trim().slice(0, 80);
+    const bankAccount = String(bankTransferInput.accountNumber || '').trim().slice(0, 80);
+    const settings = {
+      mpesaPhone: {
+        enabled: mpesaPhoneInput.enabled === true,
+        phoneNumber: mpesaPhone ? `+${mpesaPhone}` : '',
+        recipientName: String(mpesaPhoneInput.recipientName || '').trim().slice(0, 100)
+      },
+      mpesaPaybill: {
+        enabled: mpesaPaybillInput.enabled === true,
+        type: mpesaPaybillType,
+        number: mpesaPaybillNumber,
+        accountReference: mpesaPaybillReference,
+        recipientName: String(mpesaPaybillInput.recipientName || '').trim().slice(0, 100)
+      },
+      mpesaBank: {
+        enabled: mpesaBankInput.enabled === true,
+        bankName: String(mpesaBankInput.bankName || '').trim().slice(0, 100),
+        paybillNumber: mpesaBankPaybill,
+        accountNumber: mpesaBankAccount,
+        accountName: String(mpesaBankInput.accountName || '').trim().slice(0, 100)
+      },
+      bankTransfer: {
+        enabled: bankTransferInput.enabled === true,
+        bankName: String(bankTransferInput.bankName || '').trim().slice(0, 100),
+        accountName: String(bankTransferInput.accountName || '').trim().slice(0, 100),
+        accountNumber: bankAccount,
+        branch: String(bankTransferInput.branch || '').trim().slice(0, 100)
+      },
+      cash: {
+        enabled: cashInput.enabled === true,
+        instructions: String(cashInput.instructions || '').trim().slice(0, 500)
+      }
+    };
+    if (settings.mpesaPhone.enabled && (!mpesaPhone || !settings.mpesaPhone.recipientName)) {
+      return error(res, 422, 'Enter a valid M-Pesa phone number and recipient name.');
+    }
+    if (settings.mpesaPaybill.enabled && (!['paybill', 'till'].includes(mpesaPaybillType)
+      || !/^\d{5,12}$/.test(mpesaPaybillNumber) || !settings.mpesaPaybill.recipientName
+      || (mpesaPaybillType === 'paybill' && !mpesaPaybillReference))) {
+      return error(res, 422, 'Enter the recipient, valid Paybill/Till number, and Paybill account reference if required.');
+    }
+    if (settings.mpesaBank.enabled && (!settings.mpesaBank.bankName || !/^\d{5,12}$/.test(mpesaBankPaybill)
+      || !mpesaBankAccount || !settings.mpesaBank.accountName)) {
+      return error(res, 422, 'Enter the bank name, valid M-Pesa Paybill, bank account number, and account name.');
+    }
+    if (settings.bankTransfer.enabled && (!settings.bankTransfer.bankName
+      || !settings.bankTransfer.accountName || !bankAccount)) {
+      return error(res, 422, 'Enter the bank name, account name, and bank account number.');
+    }
+    if (settings.cash.enabled && !settings.cash.instructions) {
+      return error(res, 422, 'Enter instructions for handing cash to the owner or agent.');
+    }
+    const enabledMethods = Object.entries(settings).filter(([, value]) => value.enabled).map(([key]) => key);
+    store.ownerPaymentSettings[user.id] = settings;
+    recordAudit(user, 'payment_settings.updated', user.id, { ownerId: user.id, enabledMethods });
+    await saveStore(store);
+    return send(res, 200, { paymentSettings: settings });
   }
   if (method === 'POST' && url.pathname === '/api/platform-payments') {
     const user = requireUser(req, res, ['developer']);
@@ -1490,6 +1581,63 @@ async function handleApi(req, res, url) {
       }
     });
   }
+  if (method === 'POST' && url.pathname === '/api/payments/tenant-report') {
+    const user = requireUser(req, res, ['tenant']);
+    if (!user) return;
+    const body = await readJson(req);
+    const methodName = String(body.method || '');
+    const settingName = {
+      mpesa_phone: 'mpesaPhone',
+      mpesa_paybill: 'mpesaPaybill',
+      mpesa_bank: 'mpesaBank',
+      bank: 'bankTransfer',
+      cash: 'cash'
+    }[methodName];
+    if (!settingName || ownerPaymentSettingsFor(user.ownerId)[settingName]?.enabled !== true) {
+      return error(res, 422, 'Choose a payment method enabled by your property owner.');
+    }
+    const amount = Number(body.amount);
+    const reference = String(body.reference || '').trim().slice(0, 100);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100_000_000) {
+      return error(res, 422, 'Enter a valid payment amount.');
+    }
+    if (!reference) return error(res, 422, 'Enter the transaction reference or cash receipt number.');
+    const dueDate = user.nextRentDue || new Date().toISOString().slice(0, 10);
+    const lease = store.leases.find(item => item.tenantId === user.id && ['pending', 'active'].includes(item.status));
+    const dueAmount = lease ? rentAt(lease, dueDate) : Number(user.rentAmount) || 0;
+    const alreadyAccounted = store.payments
+      .filter(item => item.tenantId === user.id && item.dueDate === dueDate
+        && ['paid', 'review', 'pending'].includes(item.status))
+      .reduce((sum, item) => sum + item.amount, 0);
+    if (amount > Math.max(0, dueAmount - alreadyAccounted)) {
+      return error(res, 409, 'The reported payment exceeds the remaining rent balance.');
+    }
+    if (store.payments.some(item => item.ownerId === user.ownerId
+      && item.reference?.toLowerCase() === reference.toLowerCase())) {
+      return error(res, 409, 'That payment reference has already been recorded.');
+    }
+    const payment = {
+      id: id('payment'),
+      ownerId: user.ownerId,
+      tenantId: user.id,
+      propertyId: user.propertyId,
+      amount,
+      currency: 'KES',
+      method: methodName,
+      reference,
+      status: 'review',
+      reconciliationStatus: 'pending',
+      paymentSource: 'tenant_reported',
+      dueDate,
+      createdAt: new Date().toISOString()
+    };
+    store.payments.unshift(payment);
+    recordAudit(user, 'payment.reported_by_tenant', payment.id, {
+      ownerId: payment.ownerId, tenantId: payment.tenantId, amount, method: methodName, reference, dueDate
+    });
+    await saveStore(store);
+    return send(res, 201, { payment, message: 'Payment submitted for owner verification.' });
+  }
   if (method === 'POST' && url.pathname === '/api/payments/manual') {
     const user = requireUser(req, res, ['owner']);
     if (!user) return;
@@ -1567,6 +1715,11 @@ async function handleApi(req, res, url) {
     if (!user) return;
     if (!process.env.DARAJA_CONSUMER_KEY || !process.env.DARAJA_CALLBACK_TOKEN) {
       return error(res, 503, 'M-Pesa payments are not configured yet.');
+    }
+    const mpesaDestination = ownerPaymentSettingsFor(user.ownerId).mpesaPaybill;
+    if (!process.env.DARAJA_OWNER_ID || process.env.DARAJA_OWNER_ID !== user.ownerId
+      || !mpesaDestination.enabled || mpesaDestination.number !== process.env.DARAJA_SHORTCODE) {
+      return error(res, 503, 'STK checkout is not enabled for this owner’s configured Paybill/Till. Use the owner’s payment instructions instead.');
     }
     const body = await readJson(req);
     const phone = body.phone || user.phone;
